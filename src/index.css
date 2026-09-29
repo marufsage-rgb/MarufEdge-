@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@layer base {
+  html.text-scale-sm {
+    font-size: 14px;
+  }
+  html.text-scale-md {
+    font-size: 16px;
+  }
+  html.text-scale-lg {
+    font-size: 18px;
+  }
+
+  [dir="rtl"] {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Arabic', 'Noto Nastaliq Urdu', Tahoma, sans-serif;
+  }
+
+  /* Themes */
+  html.theme-emerald {
+    --theme-primary: #10b981;
+    --theme-glow: rgba(16, 185, 129, 0.2);
+  }
+  html.theme-gold {
+    --theme-primary: #f59e0b;
+    --theme-glow: rgba(245, 158, 11, 0.2);
+  }
+  html.theme-navy {
+    --theme-primary: #2563eb;
+    --theme-glow: rgba(37, 99, 235, 0.2);
+  }
+  html.theme-cyberpunk {
+    --theme-primary: #8b5cf6;
+    --theme-glow: rgba(139, 92, 246, 0.2);
+  }
+  html.theme-crimson {
+    --theme-primary: #e11d48;
+    --theme-glow: rgba(225, 29, 72, 0.2);
+  }
+}

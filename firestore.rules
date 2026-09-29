@@ -1,0 +1,73 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Primitives ---
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function isOwner(userId) { return request.auth.uid == userId; }
+
+    // --- Validation Helpers ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.keys().size() <= 7 &&
+             data.uid == request.auth.uid &&
+             data.email is string &&
+             data.role in ['student', 'professional', 'employer', 'admin'] &&
+             (data.get('displayName', '') is string && data.get('displayName', '').size() <= 100) &&
+             (data.get('bio', '') is string && data.get('bio', '').size() <= 500);
+    }
+
+    function isValidResource(data) {
+      return data.keys().hasAll(['title', 'description', 'category', 'authorId']) &&
+             data.keys().size() <= 11 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.description is string && data.description.size() <= 2000 &&
+             data.category in ['education', 'it_skills', 'jobs', 'products', 'solutions'] &&
+             data.authorId == request.auth.uid &&
+             (data.get('location', '') is string && data.get('location', '').size() <= 100) &&
+             (data.get('tags', []).size() <= 10);
+    }
+
+    function isValidGeneratedImage(data) {
+      return data.keys().hasAll(['userId', 'prompt', 'imageUrl']) &&
+             data.userId == request.auth.uid &&
+             data.prompt is string && data.prompt.size() <= 1000 &&
+             data.imageUrl is string;
+    }
+
+    // --- Collections ---
+
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if false; // Profiles are individual
+      allow create: if isVerified() && isOwner(userId) && isValidUser(incoming());
+      allow update: if isVerified() && isOwner(userId) && isValidUser(incoming()) && 
+                    incoming().uid == existing().uid; // UID immutable
+    }
+
+    match /resources/{resourceId} {
+      allow read: if true; // Public listings
+      allow create: if isVerified() && isValidResource(incoming());
+      allow update: if isVerified() && isOwner(existing().authorId) && isValidResource(incoming()) &&
+                    incoming().authorId == existing().authorId;
+      allow delete: if isVerified() && isOwner(existing().authorId);
+    }
+
+    match /generated_images/{imageId} {
+      allow read: if isVerified() && isOwner(resource.data.userId);
+      allow create: if isVerified() && isValidGeneratedImage(incoming());
+      allow delete: if isVerified() && isOwner(resource.data.userId);
+    }
+  }
+}
